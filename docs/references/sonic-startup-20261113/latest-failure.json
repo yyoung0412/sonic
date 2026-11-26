@@ -1,0 +1,88 @@
+{
+  "recorded_at": "2026-11-13T01:05:15+08:00",
+  "status": {
+    "run_id": "a4e12c06a3f94186a37b979647e16b81",
+    "pid": 1726881,
+    "mode": "real",
+    "phase": "failed",
+    "stop_confirmed": true,
+    "controller_running": false,
+    "controller_exit_confirmed": true,
+    "initialized": false,
+    "input_ready": false,
+    "heartbeat_at": "2026-11-12T17:03:16.487+00:00",
+    "message": "PICO身体追踪过期或标定未就绪，已阻断输入并请求SONIC停止",
+    "fault": {
+      "code": "sonic_tracking_lost",
+      "message": "PICO身体追踪过期或标定未就绪，已阻断输入并请求SONIC停止"
+    },
+    "components": {
+      "controller": true,
+      "manager": true,
+      "simulator": false,
+      "input_proxy": true
+    },
+    "feedback": {
+      "valid": false,
+      "observed_at": null,
+      "control_index": null,
+      "feedback_age_seconds": null,
+      "frequency_hz": null,
+      "accepted": 0,
+      "duplicates": 0,
+      "rejected": 0,
+      "consecutive_samples": 0,
+      "error": "",
+      "configuration_observed_at": "2026-11-12T17:03:14.129+00:00",
+      "configuration_age_seconds": 1.4052556050010026,
+      "clock_basis": "monotonic_receive_time_and_cpp_index",
+      "measurement_field": "body_q_measured (body_q fallback)"
+    }
+  },
+  "tracking_after_cleanup": {
+    "body_ready": false,
+    "source": "XRoboToolkit SDK / SONIC Manager",
+    "heartbeat_at": "2026-11-12T17:03:15.668+00:00"
+  },
+  "passive_pico_after_failure": {
+    "body_ready": true,
+    "observed_at": "2026-11-12T17:05:14.911+00:00",
+    "body_timestamp_ns": 1794503115941815296,
+    "device_timestamp_ns": 1794503115941815296,
+    "source": "XRoboToolkit SDK",
+    "calibration_confirmed": true
+  },
+  "logs": {
+    "children/manager.log": {
+      "remote_path": "/home/harry/workspace/robot_station/apps/.runtime/console/sonic-control/runs/a4e12c06a3f94186a37b979647e16b81/children/manager.log",
+      "events": [
+        "Waiting for body tracking data...",
+        "Manager controls: A+X=toggle mode, A+B+X+Y=start/stop policy",
+        "[PicoReader] dt_ts: 27.87 ms, fps: 44.90",
+        "[PicoReader] dt_ts: 14.84 ms, fps: 44.00",
+        "[PoseLoop] Calibration completed (zero-pose reference)",
+        "[Manager] StreamMode switch: OFF -> PLANNER",
+        "CANCELLEDclient cancel server stream startclient cancel server stream enduninitialize sdk[Manager] Shutdown complete"
+      ]
+    },
+    "controller.log": {
+      "remote_path": "/home/harry/workspace/robot_station/apps/.runtime/console/sonic-control/runs/a4e12c06a3f94186a37b979647e16b81/controller.log",
+      "events": [
+        "Init Done",
+        "[ZMQManager] Switched to: STREAMED MOTION mode (safety reset)",
+        "[ZMQManager] ZMQ streaming enabled",
+        "[DEBUG] Stopping G1Deploy...",
+        "Stop",
+        "[DEBUG] Program exiting normally..."
+      ]
+    }
+  },
+  "sha256": {
+    "/home/harry/workspace/robot_station/apps/console_sonic_worker.py": "477e30ab66c08337e32bdae7cc04d43e09f2710f644f8b1301d715928d18de8d",
+    "/home/harry/workspace/robot_station/apps/console_probe_worker.py": "89cd80fc14a93dc7a19289fc6845814b7c1bbff043acf4acbef78918839c913b",
+    "/home/harry/workspace/robot_station/apps/console_pico.py": "ff095e5ea1e7443d996f472cc52d5a63c38e4851e1204215b51c46aee6d01533",
+    "/home/harry/workspace/sonic_deploy/gear_sonic/scripts/pico_manager_thread_server.py": "39a120fbed1eeaf75fe218bb7eebf8940b81afc5f7f3dd71f6458be7095b0291",
+    "/home/harry/workspace/sonic_deploy/gear_sonic/utils/teleop/station_tracking.py": "526acc8f3a25124ff3b247d4e4098ef47cfe3413425233f6b526e3bf37216ecc",
+    "/home/harry/workspace/sonic_deploy/.venv_teleop/lib/python3.10/site-packages/xrobotoolkit_sdk/_core.abi3.so": "bffb7bcb626cf96b4a89c801f1c02fbc8b25a49b7055aa4a3068c579b44649b1"
+  }
+}

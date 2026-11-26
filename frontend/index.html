@@ -1,0 +1,1295 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Station</title>
+    <link rel="stylesheet" href="./styles.css?v=20260612-robot-situation-fit" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="主导航">
+        <div class="brand">
+          <span class="brand-mark">RS</span>
+          <div>
+            <strong>Robot Station</strong>
+            <span>本机控制台</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item is-active" data-view="self-check">自检</button>
+          <button class="nav-item" data-view="device-control">双臂控制</button>
+          <button class="nav-item" data-view="platform-control">平台控制</button>
+          <button class="nav-item" data-view="robot-view">整机视图</button>
+          <button class="nav-item" data-view="sensors">传感器</button>
+          <button class="nav-item" data-view="camera-calibration">相机标定</button>
+          <button class="nav-item" data-view="data-playback">数据回放</button>
+          <button class="nav-item" data-view="state-machine">状态机</button>
+          <button class="nav-item" data-view="inference">推理</button>
+        </nav>
+      </aside>
+
+      <main class="main-shell">
+        <header class="topbar">
+          <div class="status-cluster" aria-label="全局状态">
+            <button class="status-switch is-on is-readonly" id="rosStatus" type="button" aria-disabled="true" tabindex="-1" title="ROS 状态只读">
+              <span>ROS</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <button class="status-switch is-warn" id="canStatus" type="button" title="点击激活 CAN">
+              <span>CAN</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <button class="status-switch" id="piperRuntimeStatus" type="button" title="启动或关闭 Piper">
+              <span>Piper</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <button class="status-switch" id="piperRemoteRuntimeStatus" type="button" title="启动或关闭主从直通">
+              <span>主从直通</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <button class="status-switch is-idle" id="liftingRuntimeStatus" type="button" aria-pressed="false" title="启动或关闭 Lifting">
+              <span>Lifting</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <button class="status-switch is-idle" id="chassisRuntimeStatus" type="button" aria-pressed="false" title="启动或关闭 Chassis">
+              <span>Chassis</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <button class="status-switch is-idle" id="cameraRuntimeStatus" type="button" aria-pressed="false" title="启动或关闭 Camera">
+              <span>Camera</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <button class="status-switch is-idle" id="lidarRuntimeStatus" type="button" aria-pressed="false" title="启动或关闭 LiDAR">
+              <span>LiDAR</span>
+              <i aria-hidden="true"></i>
+            </button>
+            <span class="status-pill clock" id="clockStatus">--:--:--</span>
+          </div>
+
+          <div class="top-actions">
+            <button class="icon-button danger" id="estopButton" title="急停">急停</button>
+            <button class="icon-button stop" id="stopTaskButton" title="停止当前任务">停止任务</button>
+          </div>
+        </header>
+
+        <div class="workbench">
+          <section class="content-area">
+            <section class="view is-active" data-view-panel="self-check">
+              <div class="page-head compact">
+                <div>
+                  <p class="eyebrow">整机自检</p>
+                  <h1>运行前检查</h1>
+                </div>
+                <div class="button-group">
+                  <button class="secondary-button" id="rerunProblemChecksButton">复查异常</button>
+                  <button class="primary-button" id="runSelfCheckButton">一键检查</button>
+                </div>
+              </div>
+              <div class="self-check-overview" id="selfCheckOverview"></div>
+              <div class="self-check-grid">
+                <article class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>放行检查</h2>
+                      <p id="selfCheckSummary">未执行自检</p>
+                    </div>
+                    <span class="state-badge idle" id="selfCheckBadge">未检测</span>
+                  </div>
+                  <div class="check-table" id="selfCheckTable"></div>
+                </article>
+                <article class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>运行准备</h2>
+                      <p id="runtimePrepSummary">服务未全部启动时仍可继续</p>
+                    </div>
+                    <span class="state-badge idle" id="runtimePrepBadge">可选</span>
+                  </div>
+                  <div class="check-table runtime-prep-table" id="runtimePrepTable"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="view device-control-view" data-view-panel="device-control">
+              <div class="page-head compact device-page-head">
+                <div>
+                  <p class="eyebrow">双臂控制</p>
+                  <h1>机械臂操作台</h1>
+                </div>
+                <div class="device-view-status">
+                  <strong>左臂 / 右臂 / 夹爪</strong>
+                </div>
+              </div>
+
+              <div class="device-control-grid arm-control-grid">
+                <article class="panel device-card arm-compare-card device-zone-arm arm-wide-card">
+                  <div class="panel-head">
+                    <div>
+                      <h2>双臂协作</h2>
+                      <p>左臂、右臂 State / Action 对照</p>
+                    </div>
+                    <div class="arm-global-controls">
+                      <span class="state-badge idle" id="armCompareBadge">等待反馈</span>
+                    </div>
+                  </div>
+                  <div class="arm-toolbar">
+                    <label class="joint-speed-control" for="jointSpeedInput">
+                      <span>关节速度</span>
+                      <input id="jointSpeedInput" type="number" min="0.5" max="30" step="0.5" value="10" inputmode="decimal">
+                      <small>deg/s</small>
+                    </label>
+                    <button class="secondary-button copy-state-button" id="copyAllArmStateButton" type="button" disabled>复制 State</button>
+                    <button class="primary-button control-toggle-button" id="armControlToggleButton" type="button" disabled>接管控制</button>
+                    <button class="secondary-button arm-home-button" id="armHomeButton" type="button">归位</button>
+                  </div>
+                  <div class="arm-compare-list" id="armCompareList"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="view platform-control-view" data-view-panel="platform-control">
+              <div class="page-head compact platform-page-head">
+                <div>
+                  <p class="eyebrow">平台控制</p>
+                  <h1>底座与升降轴</h1>
+                </div>
+                <div class="device-view-status">
+                  <strong>移动底座 / 升降轴状态</strong>
+                </div>
+              </div>
+
+              <div class="platform-control-grid" id="liftControlPanel">
+                <article class="panel platform-sensing-card">
+                  <div class="panel-head">
+                    <div>
+                      <h2>状态感知</h2>
+                      <p>移动底座数据与升降轴高度</p>
+                    </div>
+                  </div>
+
+                  <div class="platform-sensing-stack">
+                    <section class="platform-sensing-section device-zone-base">
+                      <div class="section-title compact-title">
+                        <h2>移动底座</h2>
+                        <span>状态与速度预览</span>
+                      </div>
+                      <div class="device-status-line base-status-line">
+                        <span>控制</span><strong class="status-text idle" id="baseControlText">未启动</strong>
+                        <span>里程计</span><strong class="status-text idle" id="baseOdomText">未接入</strong>
+                        <span>模式</span><strong class="status-text idle" id="baseModeText">--</strong>
+                      </div>
+                      <div class="base-speed-compare" id="deviceBaseMetrics" role="table" aria-label="底座速度指令反馈对比"></div>
+                      <div class="base-odom-readout" id="baseOdomReadout" aria-label="底座里程计">
+                        <div class="base-odom-head">
+                          <div class="base-odom-title">
+                            <span>里程计</span>
+                            <small id="baseOdomFrame">odom → base_link</small>
+                          </div>
+                          <button class="base-odom-reset-button" id="baseOdomResetButton" type="button" title="将 ROS /odom 重置为 0">归零</button>
+                        </div>
+                        <div class="base-odom-cells">
+                          <div class="base-odom-cell">
+                            <span>位置 X</span>
+                            <strong id="baseOdomPosX">--</strong>
+                            <small>m</small>
+                          </div>
+                          <div class="base-odom-cell">
+                            <span>位置 Y</span>
+                            <strong id="baseOdomPosY">--</strong>
+                            <small>m</small>
+                          </div>
+                          <div class="base-odom-cell">
+                            <span>航向</span>
+                            <strong id="baseOdomYaw">--</strong>
+                            <small>°</small>
+                          </div>
+                          <div class="base-odom-cell">
+                            <span>位移</span>
+                            <strong id="baseOdomDist">--</strong>
+                            <small>m</small>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="platform-sensing-section device-zone-lift">
+                      <div class="section-title compact-title">
+                        <h2>升降轴 State</h2>
+                        <span>ROS 反馈高度与状态</span>
+                      </div>
+                      <div class="lift-state-panel">
+                        <div class="lift-state-primary">
+                          <span>实际高度</span>
+                          <strong id="liftActualHeightValue">--</strong>
+                          <small id="liftActualValue">等待反馈</small>
+                        </div>
+                        <div class="lift-state-grid">
+                          <div class="lift-state-metric">
+                            <span>驱动目标</span>
+                            <strong id="liftStateTargetValue">--</strong>
+                          </div>
+                          <div class="lift-state-metric">
+                            <span>反馈速度</span>
+                            <strong id="liftBackSpeedValue">--</strong>
+                          </div>
+                          <div class="lift-state-metric">
+                            <span>电源 / 电流</span>
+                            <strong id="liftPowerValue">--</strong>
+                          </div>
+                          <div class="lift-state-metric">
+                            <span>到位</span>
+                            <strong id="liftReachValue">--</strong>
+                          </div>
+                        </div>
+                        <div class="device-status-line lift-state-line">
+                          <span>服务</span><strong class="status-text idle" id="liftServiceText">未启动</strong>
+                          <span>反馈</span><strong class="status-text idle" id="liftFeedbackText">未启动</strong>
+                          <span>初始化</span><strong class="status-text warn" id="liftInitText">未完成</strong>
+                          <span>限位</span><strong class="status-text ok" id="liftLimitText">正常</strong>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </article>
+
+                <article class="panel platform-remote-card">
+                  <div class="panel-head">
+                    <div>
+                      <h2>集中操作</h2>
+                      <p>固定宽度遥控面板</p>
+                    </div>
+                    <button
+                      class="keyboard-listen-button state-badge idle"
+                      id="chassisKeyboardButton"
+                      type="button"
+                      aria-pressed="false"
+                      title="点击后监听 W/S/A/D 和 Q/E"
+                    >
+                      键盘监听
+                    </button>
+                  </div>
+
+                  <div class="platform-remote-body">
+                    <section class="remote-section">
+                      <div class="section-title compact-title">
+                        <h2>移动底座</h2>
+                        <span>方向与速度</span>
+                      </div>
+                      <div class="base-drive-cluster">
+                        <button class="base-rotate-button rotate-left" data-device-drive="left" title="左旋" aria-label="左旋">↺</button>
+                        <button class="base-rotate-button rotate-right" data-device-drive="right" title="右旋" aria-label="右旋">↻</button>
+                        <div class="drive-pad compact-drive-pad base-drive-pad">
+                          <span></span>
+                          <button data-device-drive="forward" title="前进" aria-label="前进">↑</button>
+                          <span></span>
+                          <button data-device-drive="strafe-left" title="向左横移" aria-label="向左横移">←</button>
+                          <button data-device-drive="stop" title="停止" aria-label="停止">●</button>
+                          <button data-device-drive="strafe-right" title="向右横移" aria-label="向右横移">→</button>
+                          <span></span>
+                          <button data-device-drive="backward" title="后退" aria-label="后退">↓</button>
+                          <span></span>
+                        </div>
+                      </div>
+                      <div class="base-control-panel" id="deviceBaseControlPanel"></div>
+                    </section>
+
+                    <section class="remote-section">
+                      <div class="section-title compact-title">
+                        <h2>升降轴 Action</h2>
+                        <span>目标高度与动作</span>
+                      </div>
+                      <div class="lift-action-panel">
+                        <div class="lift-action-target">
+                          <div class="lift-height-summary">
+                            <span>目标高度</span>
+                            <strong id="liftHeightValue">0.42 m</strong>
+                            <small><span id="liftMinLabel">0.05 m</span> - <span id="liftMaxLabel">0.88 m</span></small>
+                            <small id="liftModeValue">等待初始化</small>
+                          </div>
+                          <label class="slider-row lift-slider-row lift-height-action-row">
+                            <span>Action</span>
+                            <input
+                              id="liftHeightInput"
+                              type="range"
+                              min="0.05"
+                              max="0.88"
+                              step="0.01"
+                              value="0.42"
+                              data-lift-control="height"
+                              aria-label="升降轴目标高度"
+                            />
+                            <span class="number-field lift-height-number">
+                              <input
+                                id="liftHeightNumberInput"
+                                type="number"
+                                min="0.05"
+                                max="0.88"
+                                step="0.01"
+                                value="0.42"
+                                data-lift-control="height"
+                                aria-label="升降轴目标高度数值"
+                              />
+                              <small>m</small>
+                            </span>
+                          </label>
+                        </div>
+
+                        <div class="lift-action-controls">
+                          <button class="primary-button" id="liftApplyHeightButton" type="button">执行目标</button>
+                          <button class="secondary-button" id="liftInitButton" type="button">初始化</button>
+                          <button class="icon-button stop lift-stop-button" id="liftStopButton" type="button" data-device-stop="lift">停止</button>
+                        </div>
+
+                        <div class="lift-speed-panel">
+                          <label class="slider-row lift-slider-row">
+                            <span>速度</span>
+                            <small>0.02 m/s</small>
+                            <input id="liftSpeedInput" type="range" min="0.02" max="0.16" step="0.01" value="0.08" data-lift-control="speed" />
+                            <small>0.16 m/s</small>
+                            <strong id="liftSpeedPreview">0.08 m/s</strong>
+                          </label>
+                        </div>
+                        <div class="lift-ops-grid">
+                          <div class="lift-presets" aria-label="升降轴预设高度">
+                            <button data-lift-preset="0.18">低位</button>
+                            <button data-lift-preset="0.42">作业</button>
+                            <button data-lift-preset="0.72">高位</button>
+                          </div>
+                          <div class="lift-relative-panel" aria-label="升降轴相对移动">
+                            <label class="lift-step-row">
+                              <button class="lift-step-button up" type="button" data-lift-move="up">↑ 上升</button>
+                              <input id="liftStepUpInput" type="number" min="1" max="750" step="1" value="50" inputmode="numeric" data-lift-step="up" aria-label="上升距离" />
+                              <span>mm</span>
+                            </label>
+                            <label class="lift-step-row">
+                              <button class="lift-step-button down" type="button" data-lift-move="down">↓ 下降</button>
+                              <input id="liftStepDownInput" type="number" min="1" max="750" step="1" value="50" inputmode="numeric" data-lift-step="down" aria-label="下降距离" />
+                              <span>mm</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="view robot-view" data-view-panel="robot-view">
+              <div class="page-head compact robot-page-head robot-situation-head">
+                <div>
+                  <p class="eyebrow">整机视图</p>
+                  <h1>整机态势</h1>
+                </div>
+                <div class="device-view-status robot-situation-status">
+                  <span>Ranger Mini v3 / Piper x2 / 升降轴</span>
+                  <strong id="robotWorkStatusText">当前作业：建图</strong>
+                </div>
+              </div>
+
+              <div class="robot-view-grid robot-situation-grid">
+                <article class="panel robot-viewport-card robot-situation-canvas">
+                  <div class="robot-viewport">
+                    <div class="robot-stage" id="robotViewStage" aria-label="整机状态示意">
+                      <div class="robot-stage-toolbar robot-stage-toolbar-left" aria-label="整机模型加载">
+                        <div class="robot-model-quick-row">
+                          <select id="robotModelSelect" aria-label="整机模型选择"></select>
+                          <button class="secondary-button" id="robotModelLoadButton" type="button">加载</button>
+                        </div>
+                        <div class="robot-stage-status-row">
+                          <span class="state-badge idle" id="robotModelBadge">模型待接入</span>
+                          <button class="robot-modal-trigger" data-robot-modal-toggle="model-load" type="button" aria-expanded="false">模型加载详情</button>
+                        </div>
+                        <p id="robotModelDetail">等待模型资源接入</p>
+                      </div>
+                      <div class="robot-layer-toolbar robot-stage-toolbar-right" aria-label="整机视口图层">
+                        <button class="secondary-button pose-sync-button" id="robotPoseSyncButton" type="button" aria-pressed="false">姿态同步</button>
+                        <button class="secondary-button robot-lidar-button" id="robotLidarToggleButton" type="button" aria-pressed="false">LiDAR</button>
+                      </div>
+                      <div class="robot-view-overlay">
+                        <strong id="robotOverlayTitle">前端视图已就绪</strong>
+                        <span id="robotOverlayDetail">URDF 与 mesh 加载接口未接入</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="metric-grid mapping-metrics robot-map-status-strip" id="mappingMetrics"></div>
+                </article>
+
+                <article class="panel mapping-panel robot-work-panel">
+                  <div class="panel-head robot-work-head">
+                    <div>
+                      <h2 id="robotWorkTitle">建图作业</h2>
+                      <p id="mappingSummary">等待创建建图会话</p>
+                    </div>
+                    <span class="state-badge idle" id="mappingBadge">未开始</span>
+                  </div>
+
+                  <div class="segmented robot-work-mode-tabs" id="robotWorkModeTabs" role="tablist" aria-label="整机作业切换">
+                    <button class="is-active" data-robot-work-mode="mapping" type="button" role="tab" aria-selected="true">建图</button>
+                    <button data-robot-work-mode="localization" type="button" role="tab" aria-selected="false">定位</button>
+                    <button data-robot-work-mode="navigation" type="button" role="tab" aria-selected="false">导航</button>
+                  </div>
+
+                  <div class="navigation-run-actions navigation-top-actions" data-work-content="navigation" hidden>
+                    <button class="primary-button" id="navigationPlanButton" type="button" disabled>预览路径</button>
+                    <button class="primary-button" id="navigationStartButton" type="button" disabled>开始导航</button>
+                    <button class="secondary-button" id="navigationCancelButton" type="button" disabled>停止</button>
+                  </div>
+
+                  <div class="mapping-actions robot-work-actions" data-work-content="mapping">
+                    <button class="primary-button" id="mappingCaptureButton" type="button" disabled>采集点云</button>
+                    <button class="secondary-button" id="mappingStartButton" type="button">新建</button>
+                    <button class="secondary-button" id="mappingSaveButton" type="button" disabled>保存</button>
+                    <button class="secondary-button" id="mappingDeleteLastButton" type="button" disabled>删除上一帧</button>
+                    <button class="secondary-button" id="mappingResetButton" type="button" disabled>重置</button>
+                  </div>
+
+                  <div class="robot-modal-entry-row" data-work-content="mapping">
+                    <button class="secondary-button" data-robot-modal-toggle="mapping-config" type="button" aria-expanded="false">采集参数</button>
+                    <button class="secondary-button" data-robot-modal-toggle="mapping-details" type="button" aria-expanded="false">建图详情</button>
+                  </div>
+
+                  <section class="robot-side-section mapping-drive-section" data-work-content="mapping">
+                    <div class="section-title compact-title robot-section-row">
+                      <div>
+                        <h2>建图驾驶</h2>
+                        <span>与平台控制共用限速和指令通路</span>
+                      </div>
+                      <button
+                        class="keyboard-listen-button state-badge idle mapping-keyboard-button"
+                        id="mappingChassisKeyboardButton"
+                        type="button"
+                        aria-pressed="false"
+                        title="点击后监听 W/S/A/D 和 Q/E"
+                      >
+                        键盘监听
+                      </button>
+                    </div>
+                    <div class="base-drive-cluster mapping-drive-cluster">
+                      <button class="base-rotate-button rotate-left" data-mapping-drive="left" title="左旋" aria-label="左旋">↺</button>
+                      <button class="base-rotate-button rotate-right" data-mapping-drive="right" title="右旋" aria-label="右旋">↻</button>
+                      <div class="drive-pad compact-drive-pad base-drive-pad">
+                        <span></span>
+                        <button data-mapping-drive="forward" title="前进" aria-label="前进">↑</button>
+                        <span></span>
+                        <button data-mapping-drive="strafe-left" title="向左横移" aria-label="向左横移">←</button>
+                        <button data-mapping-drive="stop" title="停止" aria-label="停止">●</button>
+                        <button data-mapping-drive="strafe-right" title="向右横移" aria-label="向右横移">→</button>
+                        <span></span>
+                        <button data-mapping-drive="backward" title="后退" aria-label="后退">↓</button>
+                        <span></span>
+                      </div>
+                    </div>
+                    <div class="mapping-speed-panel">
+                      <div class="mapping-speed-headline">
+                        <span>速度设置</span>
+                        <small id="mappingSpeedSummary">低速点动</small>
+                      </div>
+                      <div class="base-control-panel mapping-base-control-panel" id="mappingBaseControlPanel"></div>
+                    </div>
+                  </section>
+
+                  <section class="robot-side-section localization-map-section" data-work-content="localization" hidden>
+                    <div class="section-title compact-title">
+                      <h2>地图选择</h2>
+                      <span id="localizationMapSummary">地图列表接口未接入</span>
+                    </div>
+                    <div class="localization-map-actions">
+                      <select id="localizationMapSelect" aria-label="定位地图选择" disabled>
+                        <option value="">地图列表待接入</option>
+                      </select>
+                      <button class="secondary-button" id="localizationLoadMapButton" type="button" disabled>加载地图</button>
+                    </div>
+                    <div class="localization-backend-actions">
+                      <span>定位后端</span>
+                      <select id="localizationBackendSelect" aria-label="定位后端选择">
+                        <option value="cpu">CPU / PCL</option>
+                        <option value="gpu">GPU / CUDA</option>
+                      </select>
+                    </div>
+                    <div class="localization-run-actions">
+                      <button class="primary-button" id="localizationStartButton" type="button" disabled>开始定位</button>
+                      <button class="secondary-button" id="localizationStopButton" type="button" disabled>停止定位</button>
+                      <button class="secondary-button" id="localizationRestartButton" type="button" disabled>重启定位</button>
+                    </div>
+                    <div class="localization-empty-map" id="localizationMapInfo">
+                      <strong>暂无地图源</strong>
+                      <span>等待保存地图列表与点云读取接口</span>
+                    </div>
+                  </section>
+
+                  <section class="robot-side-section localization-status-section" data-work-content="localization" hidden>
+                    <div class="section-title compact-title robot-section-row">
+                      <div>
+                        <h2>定位状态</h2>
+                        <span id="localizationStatusSummary">点云定位结果待接入</span>
+                      </div>
+                      <button class="secondary-button robot-section-link" data-robot-modal-toggle="localization-advanced" type="button" aria-label="定位高级信息" aria-expanded="false">高级信息</button>
+                    </div>
+                    <div class="metric-grid localization-status-metrics" id="localizationStatusMetrics"></div>
+                  </section>
+
+                  <section class="robot-side-section initial-pose-section" data-work-content="localization" hidden>
+                    <div class="section-title compact-title">
+                      <h2>Initial Pose</h2>
+                      <span id="initialPoseZText">XY 平面 / Z=0</span>
+                    </div>
+                    <div class="initial-pose-layout">
+                      <div class="initial-pose-stage" id="initialPoseStage" aria-label="Initial pose 箭头工具">
+                        <div class="initial-pose-grid" aria-hidden="true"></div>
+                        <div class="initial-pose-axis x" aria-hidden="true">X</div>
+                        <div class="initial-pose-axis y" aria-hidden="true">Y</div>
+                        <div class="initial-pose-arrow is-disabled" aria-hidden="true">
+                          <span class="initial-pose-arrow-shaft"></span>
+                          <span class="initial-pose-arrow-head"></span>
+                        </div>
+                        <span class="initial-pose-stage-label">待接入地图点云</span>
+                      </div>
+                      <form class="initial-pose-form" id="initialPoseForm" autocomplete="off">
+                        <label><span>x</span><input id="initialPoseXInput" type="number" step="0.01" value="0" inputmode="decimal" data-initial-pose-field="x"></label>
+                        <label><span>y</span><input id="initialPoseYInput" type="number" step="0.01" value="0" inputmode="decimal" data-initial-pose-field="y"></label>
+                        <label><span>yaw</span><input id="initialPoseYawInput" type="number" step="1" value="0" inputmode="decimal" data-initial-pose-field="yawDeg"></label>
+                      </form>
+                    </div>
+                    <div class="initial-pose-actions">
+                      <button class="secondary-button" id="initialPoseEditButton" type="button" aria-pressed="false" disabled>设定初值</button>
+                      <button class="secondary-button" id="initialPosePublishButton" type="button" disabled>发布初值</button>
+                    </div>
+                  </section>
+
+                  <section class="robot-side-section navigation-context-section" data-work-content="navigation" hidden>
+                    <div class="section-title compact-title">
+                      <h2>导航上下文</h2>
+                      <span id="navigationContextSummary">等待定位结果</span>
+                    </div>
+                    <div class="navigation-context-list" id="navigationContextList"></div>
+                  </section>
+
+                  <section class="robot-side-section navigation-goal-section" data-work-content="navigation" hidden>
+                    <div class="section-title compact-title">
+                      <h2>导航目标</h2>
+                      <span id="navigationGoalZText">XY 平面 / Z=0</span>
+                    </div>
+                    <div class="initial-pose-layout navigation-goal-layout">
+                      <div class="initial-pose-stage navigation-goal-stage" id="navigationGoalStage" aria-label="导航终点箭头工具">
+                        <div class="initial-pose-grid" aria-hidden="true"></div>
+                        <div class="initial-pose-axis x" aria-hidden="true">X</div>
+                        <div class="initial-pose-axis y" aria-hidden="true">Y</div>
+                        <div class="initial-pose-arrow navigation-goal-arrow is-disabled" aria-hidden="true">
+                          <span class="initial-pose-arrow-shaft"></span>
+                          <span class="initial-pose-arrow-head"></span>
+                        </div>
+                        <span class="initial-pose-stage-label navigation-goal-stage-label">待加载地图</span>
+                      </div>
+                      <form class="initial-pose-form navigation-goal-form" id="navigationGoalForm" autocomplete="off">
+                        <label><span>x</span><input id="navigationGoalXInput" type="number" step="0.01" value="" inputmode="decimal" data-navigation-goal-field="x"></label>
+                        <label><span>y</span><input id="navigationGoalYInput" type="number" step="0.01" value="" inputmode="decimal" data-navigation-goal-field="y"></label>
+                        <label><span>yaw</span><input id="navigationGoalYawInput" type="number" step="1" value="" inputmode="decimal" data-navigation-goal-field="yawDeg"></label>
+                      </form>
+                    </div>
+                    <div class="initial-pose-actions navigation-goal-actions">
+                      <button class="secondary-button" id="navigationGoalEditButton" type="button" aria-pressed="false" disabled>设定目标</button>
+                      <button class="secondary-button" id="navigationGoalClearButton" type="button" disabled>清除目标</button>
+                    </div>
+                  </section>
+
+                  <section class="robot-side-section navigation-plan-section" data-work-content="navigation" hidden>
+                    <div class="section-title compact-title robot-section-row">
+                      <div>
+                        <h2>路径与执行</h2>
+                        <span id="navigationPlanSummary">目标点待设置</span>
+                      </div>
+                      <button class="secondary-button robot-section-link" data-robot-modal-toggle="navigation-details" type="button" aria-label="导航详情" aria-expanded="false">导航详情</button>
+                    </div>
+                    <form class="config-form navigation-param-form" id="navigationParamsForm" autocomplete="off">
+                      <label>
+                        <span class="field-label">模式<em>mode</em></span>
+                        <select id="navigationModeSelect">
+                          <option value="lateral">横向</option>
+                          <option value="omni">全向</option>
+                        </select>
+                      </label>
+                      <label><span class="field-label">前后限速<em>m/s</em></span><input id="navigationMaxLinearInput" type="number" min="0.01" max="0.20" step="0.01" value="0.20" inputmode="decimal"></label>
+                      <label><span class="field-label">横移限速<em>m/s</em></span><input id="navigationMaxLateralInput" type="number" min="0.01" max="0.15" step="0.01" value="0.15" inputmode="decimal"></label>
+                      <label><span class="field-label">旋转限速<em>rad/s</em></span><input id="navigationMaxAngularInput" type="number" min="0.02" max="0.50" step="0.01" value="0.50" inputmode="decimal"></label>
+                      <label><span class="field-label">位置误差<em>m</em></span><input id="navigationPositionToleranceInput" type="number" min="0.02" max="1.00" step="0.01" value="0.05" inputmode="decimal"></label>
+                      <label><span class="field-label">角度误差<em>deg</em></span><input id="navigationYawToleranceInput" type="number" min="1" max="45" step="1" value="3" inputmode="decimal"></label>
+                      <label><span class="field-label">定位超时<em>s</em></span><input id="navigationLocalizationStaleInput" type="number" min="0.1" max="5" step="0.1" value="0.8" inputmode="decimal"></label>
+                      <label><span class="field-label">控制频率<em>Hz</em></span><input id="navigationControlRateInput" type="number" min="5" max="50" step="1" value="20" inputmode="numeric"></label>
+                    </form>
+                    <div class="metric-grid navigation-metrics" id="navigationMetrics"></div>
+                  </section>
+                </article>
+              </div>
+
+              <div class="robot-work-modal" id="robotWorkModal" hidden>
+                <div class="robot-work-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="robotWorkModalTitle">
+                  <div class="robot-work-modal-head">
+                    <div>
+                      <p id="robotWorkModalKicker">整机视图</p>
+                      <h2 id="robotWorkModalTitle">详情</h2>
+                    </div>
+                    <button class="icon-button robot-work-modal-close" id="robotWorkModalClose" type="button" aria-label="关闭">×</button>
+                  </div>
+                  <div class="robot-work-modal-body">
+                    <section class="robot-modal-panel mapping-config-section" data-robot-modal-panel="mapping-config" hidden>
+                      <div class="robot-modal-subhead">
+                        <span>当前参数</span>
+                        <strong id="mappingConfigSummary">10 frames / /rslidar_points / /odom / base_link</strong>
+                      </div>
+                      <form class="config-form mapping-config-form" id="mappingConfigForm" autocomplete="off">
+                        <label><span class="field-label">采集帧数<em>frames</em></span><input id="mappingFrameCountInput" type="number" min="1" max="200" step="1" value="10" inputmode="numeric"></label>
+                        <label><span class="field-label">点云 topic<em>filtered</em></span><input id="mappingCloudTopicInput" type="text" value="/rslidar_points"></label>
+                        <label><span class="field-label">里程计 topic<em>odom</em></span><input id="mappingOdomTopicInput" type="text" value="/odom"></label>
+                        <label><span class="field-label">base frame<em>TF</em></span><input id="mappingBaseFrameInput" type="text" value="base_link"></label>
+                      </form>
+                    </section>
+
+                    <section class="robot-modal-panel mapping-status-section" data-robot-modal-panel="mapping-details" hidden>
+                      <div class="robot-modal-subhead">
+                        <span>Session</span>
+                        <strong id="mappingSessionText">未创建 session</strong>
+                      </div>
+                      <div class="mapping-detail-list" id="mappingDetailList"></div>
+                      <div class="mapping-log" id="mappingKeyframeList"></div>
+                    </section>
+
+                    <section class="robot-modal-panel robot-model-detail-section" data-robot-modal-panel="model-load" hidden>
+                      <div class="mapping-detail-list robot-resource-list" id="robotResourceList"></div>
+                      <div class="robot-load-progress" id="robotLoadProgress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div class="robot-load-progress-head">
+                          <span id="robotLoadProgressText">等待加载</span>
+                          <strong id="robotLoadProgressValue">0%</strong>
+                        </div>
+                        <div class="robot-load-track" aria-hidden="true">
+                          <span id="robotLoadProgressBar"></span>
+                        </div>
+                        <small id="robotLoadProgressDetail">选择模型后点击加载</small>
+                      </div>
+                    </section>
+
+                    <section class="robot-modal-panel localization-advanced-section" data-robot-modal-panel="localization-advanced" hidden>
+                      <div class="mapping-detail-list localization-detail-list" id="localizationDetailList"></div>
+                    </section>
+
+                    <section class="robot-modal-panel navigation-details-section" data-robot-modal-panel="navigation-details" hidden>
+                      <div class="mapping-detail-list navigation-detail-list" id="navigationDetailList"></div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="view state-machine-view" data-view-panel="state-machine">
+              <div class="page-head compact state-machine-page-head">
+                <div>
+                  <p class="eyebrow">任务编排</p>
+                  <h1>状态机编辑器</h1>
+                  <div class="segmented state-machine-mode-tabs" id="stateMachineModeTabs" aria-label="状态机编辑模式">
+                    <button class="is-active" data-sm-mode="graph" type="button">状态流程</button>
+                    <button data-sm-mode="events" type="button">事件编排</button>
+                  </div>
+                </div>
+                <div class="button-group state-machine-actions" data-sm-actions-panel="graph">
+                  <button class="secondary-button" id="stateMachineCopyJsonButton" type="button">复制 JSON</button>
+                  <button class="secondary-button" id="stateMachineClearButton" type="button">清空</button>
+                  <button class="secondary-button" id="stateMachineRealStopButton" type="button" disabled>停止运行</button>
+                  <button class="secondary-button" id="stateMachineRealLoopButton" type="button">循环运行</button>
+                  <button class="primary-button" id="stateMachineRealRunButton" type="button">运行</button>
+                </div>
+                <div class="button-group state-machine-actions" data-sm-actions-panel="events" hidden>
+                  <button class="secondary-button" id="eventSequenceClearButton" type="button">清空</button>
+                  <button class="secondary-button" id="eventSequenceSaveButton" type="button">保存序列</button>
+                  <button class="secondary-button" id="eventSequenceStopButton" type="button" disabled>停止运行</button>
+                  <button class="secondary-button" id="eventSequenceLoopButton" type="button">循环运行</button>
+                  <button class="primary-button" id="eventSequenceRunButton" type="button">运行序列</button>
+                </div>
+              </div>
+
+              <div class="state-machine-mode-panel" data-sm-mode-panel="graph">
+                <div class="state-machine-layout">
+                  <article class="panel state-machine-palette">
+                    <div class="panel-head">
+                      <div>
+                        <h2>状态库</h2>
+                        <p>点击加号自定义状态，拖到画布使用</p>
+                      </div>
+                    </div>
+                    <div class="state-machine-node-library" id="stateMachineNodeLibrary"></div>
+                  </article>
+
+                  <article class="panel state-machine-canvas-panel">
+                    <div class="panel-head state-machine-canvas-head">
+                      <div>
+                        <h2 id="stateMachineTitle">状态机草稿</h2>
+                        <p id="stateMachineSummary">Start / End 固定，多出口随机执行</p>
+                      </div>
+                      <span class="state-badge idle" id="stateMachineBadge">编辑中</span>
+                    </div>
+                    <div class="state-machine-graph-bar">
+                      <label class="state-machine-name-field">
+                        <span class="field-label">流程名称</span>
+                        <input id="stateMachineNameInput" type="text" value="取物流程草稿" autocomplete="off">
+                      </label>
+                      <label class="state-machine-graph-field">
+                        <span class="field-label">已保存流程</span>
+                        <select id="stateMachineGraphSelect"></select>
+                      </label>
+                      <div class="button-group state-machine-graph-actions">
+                        <button class="primary-button" id="stateMachineGraphSaveButton" type="button">保存</button>
+                        <button class="secondary-button" id="stateMachineGraphLoadButton" type="button">载入</button>
+                        <button class="secondary-button" id="stateMachineGraphDeleteButton" type="button">删除</button>
+                      </div>
+                    </div>
+                    <div class="state-machine-canvas-help">
+                      <span>拖拽状态创建节点</span>
+                      <span>点击“连线”后再点目标节点</span>
+                      <span>点连线上的 × 可删除连线</span>
+                      <span>多出口随机选一个执行</span>
+                    </div>
+                    <div class="state-machine-canvas" id="stateMachineCanvas" aria-label="状态机画布"></div>
+                  </article>
+                </div>
+              </div>
+
+              <div class="state-machine-mode-panel state-machine-event-layout" data-sm-mode-panel="events" hidden>
+                <article class="panel state-machine-event-library-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>事件库</h2>
+                      <p>已保存流程可作为事件加入序列</p>
+                    </div>
+                  </div>
+                  <div class="state-machine-event-library" id="stateMachineEventLibrary"></div>
+                </article>
+
+                <article class="panel state-machine-event-sequence-panel">
+                  <div class="panel-head state-machine-canvas-head">
+                    <div>
+                      <h2 id="eventSequenceTitle">事件序列草稿</h2>
+                      <p id="eventSequenceSummary">0 个事件</p>
+                    </div>
+                    <span class="state-badge idle" id="eventSequenceBadge">编辑中</span>
+                  </div>
+                  <div class="state-machine-graph-bar state-machine-event-bar">
+                    <label class="state-machine-name-field">
+                      <span class="field-label">序列名称</span>
+                      <input id="eventSequenceNameInput" type="text" value="完整任务序列" autocomplete="off">
+                    </label>
+                    <label class="state-machine-graph-field">
+                      <span class="field-label">已保存序列</span>
+                      <select id="eventSequenceSelect"></select>
+                    </label>
+                    <div class="button-group state-machine-graph-actions">
+                      <button class="secondary-button" id="eventSequenceLoadButton" type="button">载入</button>
+                      <button class="secondary-button" id="eventSequenceDeleteButton" type="button">删除</button>
+                    </div>
+                  </div>
+                  <div class="state-machine-event-sequence-list" id="stateMachineEventSequenceList"></div>
+                </article>
+
+                <article class="panel state-machine-event-detail-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>事件详情</h2>
+                      <p>当前事件与子流程状态</p>
+                    </div>
+                  </div>
+                  <div class="state-machine-event-detail" id="stateMachineEventDetail"></div>
+                </article>
+              </div>
+
+              <div class="state-machine-modal" id="stateMachineModal" hidden>
+                <div class="state-machine-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="stateMachineModalTitle">
+                  <div class="state-machine-modal-head">
+                    <div>
+                      <p id="stateMachineModalKicker">导航</p>
+                      <h2 id="stateMachineModalTitle">新建状态</h2>
+                    </div>
+                    <button class="icon-button state-machine-modal-close" id="stateMachineModalClose" type="button" aria-label="关闭">×</button>
+                  </div>
+                  <form class="config-form state-machine-modal-form" id="stateMachineModalForm" autocomplete="off"></form>
+                  <div class="button-group state-machine-modal-actions">
+                    <button class="secondary-button" id="stateMachineModalCancelButton" type="button">取消</button>
+                    <button class="primary-button" id="stateMachineModalSaveButton" type="button">保存</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="view" data-view-panel="inference">
+              <div class="page-head compact">
+                <div>
+                  <p class="eyebrow">推理执行</p>
+                  <h1>远程推理</h1>
+                </div>
+                <div class="button-group">
+                  <button class="secondary-button" id="inferenceConnectButton">连接远端</button>
+                  <button class="secondary-button" id="inferenceDisconnectButton">断开</button>
+                  <button class="secondary-button" id="stopInferenceButton">停止</button>
+                </div>
+              </div>
+              <div class="split-grid">
+                <article class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>运行配置</h2>
+                      <p>前端把远端地址交给本机后端建立 WebSocket，前端不直连远端</p>
+                    </div>
+                    <span class="state-badge idle" id="inferenceBadge">未连接</span>
+                  </div>
+                  <form class="config-form inference-config" id="inferenceConfigForm" autocomplete="off">
+                    <label class="field-wide"><span class="field-label">远端地址</span><input id="remoteUrlInput" type="text" value="ws://192.168.1.154:8888/infer" placeholder="ws://192.168.1.154:8888/infer" inputmode="url"></label>
+                    <label class="field-wide"><span class="field-label">任务指令 prompt</span><input id="promptInput" type="text" value="Target: Grape Juice. Pick the Grape Juice from the shelf and place it into the cart." placeholder="Target: Grape Juice. Pick the Grape Juice from the shelf and place it into the cart."></label>
+                    <label><span class="field-label">关节速度<em>deg/s</em></span><input id="inferenceJointSpeedInput" type="number" min="0.5" max="30" step="0.5" value="20" inputmode="decimal"></label>
+                    <label><span class="field-label">发送频率<em>Hz</em></span><input id="inferenceFrequencyInput" type="number" min="1" max="30" step="1" value="10" inputmode="numeric"></label>
+                    <label class="field-wide"><span class="field-label">执行步数 N<em>每轮执行的动作步数</em></span><input id="inferenceStepsInput" type="number" min="1" max="200" step="1" value="20" inputmode="numeric"></label>
+                    <div class="field-wide limit-group">
+                      <span class="field-label">底盘速度上限<em>不超过整机硬限位，越限的 chunk 会被拒绝</em></span>
+                      <div class="limit-row">
+                        <label><span>vx (m/s)</span><input id="inferenceMaxVxInput" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                        <label><span>vy (m/s)</span><input id="inferenceMaxVyInput" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                        <label><span>wz (rad/s)</span><input id="inferenceMaxWzInput" type="number" min="0" step="0.01" inputmode="decimal"></label>
+                      </div>
+                    </div>
+                    <label class="toggle-row" for="inferenceLoopToggle">
+                      <span class="toggle-text"><strong>连续闭环</strong><small>自动循环：观测 → 请求 chunk → 执行 N 步</small></span>
+                      <input id="inferenceLoopToggle" type="checkbox">
+                      <i class="toggle-switch" aria-hidden="true"></i>
+                    </label>
+                  </form>
+                  <div class="preflight-list" id="preflightList"></div>
+                </article>
+
+                <article class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>推理状态</h2>
+                      <p id="inferenceSummary">未连接远端推理服务</p>
+                    </div>
+                    <button class="secondary-button" data-view-jump="device-control">低速接管</button>
+                  </div>
+                  <div class="button-group inference-actions">
+                    <button class="secondary-button" id="inferenceEnablePiperButton">使能 Piper</button>
+                    <button class="secondary-button" id="requestChunkButton">请求 chunk</button>
+                    <button class="primary-button" id="executeChunkButton">执行 N 步</button>
+                  </div>
+                  <div class="metric-grid inference-metrics" id="inferenceMetrics"></div>
+                  <div class="action-mask" id="inferenceMaskPanel"></div>
+                  <div class="action-output" id="lastActionOutput">最近动作：无</div>
+                </article>
+              </div>
+            </section>
+
+            <section class="view" data-view-panel="sensors">
+              <div class="page-head compact">
+                <div>
+                  <p class="eyebrow">传感器与状态</p>
+                  <h1>设备监控</h1>
+                </div>
+                <div class="segmented" role="tablist">
+                  <button class="is-active" data-sensor-tab="camera">相机</button>
+                  <button data-sensor-tab="lidar">LiDAR</button>
+                </div>
+              </div>
+
+              <div class="sensor-panel is-active" data-sensor-panel="camera">
+                <div class="camera-strip">
+                  <div class="camera-strip-title">
+                    <strong id="cameraKindTitle">RGB 相机</strong>
+                    <span id="cameraKindHint">四路 RGB 压缩图</span>
+                  </div>
+                  <div class="segmented camera-kind-tabs" id="cameraKindTabs" role="tablist" aria-label="相机图像类型">
+                    <button class="is-active" data-camera-kind-tab="color" type="button">RGB</button>
+                    <button data-camera-kind-tab="depth" type="button">深度</button>
+                    <button data-camera-kind-tab="ir" type="button">IR</button>
+                  </div>
+                  <div class="segmented camera-source-tabs" id="cameraSourceTabs" role="tablist" aria-label="相机来源"></div>
+                  <div class="sensor-preview-actions">
+                    <span id="cameraFeedSummary">回显关闭</span>
+                    <button class="secondary-button sensor-preview-toggle" id="cameraPreviewToggleButton" type="button" aria-pressed="false">回显关闭</button>
+                  </div>
+                </div>
+                <div class="video-grid camera-grid" id="cameraFrameGrid"></div>
+              </div>
+
+              <div class="sensor-panel" data-sensor-panel="lidar">
+                <article class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>3D 点云</h2>
+                      <p id="lidarCloudTopic">/rslidar_points</p>
+                    </div>
+                    <div class="sensor-preview-actions">
+                      <span class="state-badge idle" id="lidarCloudStatus">回显关闭</span>
+                      <button class="secondary-button sensor-preview-toggle" id="lidarPreviewToggleButton" type="button" aria-pressed="false">回显关闭</button>
+                    </div>
+                  </div>
+                  <div class="lidar-toolbar">
+                    <span><strong id="lidarPointCount">0</strong><small>点</small></span>
+                    <span><strong id="lidarFrameAge">--</strong><small>延迟</small></span>
+                    <span><strong id="lidarFrameRate">--</strong><small>Hz</small></span>
+                    <span><strong id="lidarFrameId">--</strong><small>frame</small></span>
+                    <label class="lidar-point-size-control">
+                      <div>
+                        <strong id="lidarPointRadiusValue">0.014</strong>
+                        <small>点半径</small>
+                      </div>
+                      <input id="lidarPointRadiusInput" type="range" min="0.006" max="0.035" step="0.001" value="0.014" aria-label="点云点半径">
+                    </label>
+                  </div>
+                  <div class="lidar-viewer" id="lidarViewer">
+                    <div class="lidar-scene" id="lidarScene"></div>
+                    <div class="lidar-overlay" id="lidarOverlay">等待 /rslidar_points</div>
+                  </div>
+                </article>
+              </div>
+
+            </section>
+            <section class="view camera-calibration-view" data-view-panel="camera-calibration">
+              <div class="page-head compact camera-calibration-head">
+                <div>
+                  <p class="eyebrow">相机标定</p>
+                  <h1>RGB 外参工作台</h1>
+                </div>
+                <div class="camera-calibration-status">
+                  <span class="state-badge idle" id="cameraCalibrationStatusBadge">读取中</span>
+                  <button class="secondary-button" id="cameraCalibrationRefreshButton" type="button">刷新</button>
+                  <button class="primary-button" id="cameraExtrinsicsServiceButton" type="button" disabled>启动外参发布</button>
+                </div>
+              </div>
+
+              <div class="camera-calibration-grid">
+                <article class="panel calibration-target-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>标定对象</h2>
+                      <p>RGB 相机到安装 link 的静态外参</p>
+                    </div>
+                    <span class="state-badge idle" id="cameraCalibrationConfigBadge">读取中</span>
+                  </div>
+
+                  <div class="calibration-camera-list" id="calibrationCameraList">
+                    <section class="calibration-camera-card is-selected">
+                      <div class="calibration-camera-title">
+                        <span>L</span>
+                        <div>
+                          <strong>左相机</strong>
+                          <small>camera_l</small>
+                        </div>
+                      </div>
+                      <dl>
+                        <div><dt>父级 link</dt><dd>left/link6</dd></div>
+                        <div><dt>目标 link</dt><dd>rgb_camera_l_link</dd></div>
+                        <div><dt>CameraInfo</dt><dd>/camera_l/color/camera_info</dd></div>
+                      </dl>
+                      <div class="calibration-card-footer">
+                        <span class="state-badge idle">0 / 24</span>
+                        <button class="secondary-button" type="button" disabled>采样</button>
+                      </div>
+                    </section>
+
+                    <section class="calibration-camera-card">
+                      <div class="calibration-camera-title">
+                        <span>R</span>
+                        <div>
+                          <strong>右相机</strong>
+                          <small>camera_r</small>
+                        </div>
+                      </div>
+                      <dl>
+                        <div><dt>父级 link</dt><dd>right/link6</dd></div>
+                        <div><dt>目标 link</dt><dd>rgb_camera_r_link</dd></div>
+                        <div><dt>CameraInfo</dt><dd>/camera_r/color/camera_info</dd></div>
+                      </dl>
+                      <div class="calibration-card-footer">
+                        <span class="state-badge idle">0 / 24</span>
+                        <button class="secondary-button" type="button" disabled>采样</button>
+                      </div>
+                    </section>
+
+                    <section class="calibration-camera-card">
+                      <div class="calibration-camera-title">
+                        <span>F</span>
+                        <div>
+                          <strong>中间相机</strong>
+                          <small>camera_f</small>
+                        </div>
+                      </div>
+                      <dl>
+                        <div><dt>父级 link</dt><dd>front_camera_link</dd></div>
+                        <div><dt>目标 link</dt><dd>rgb_camera_f_link</dd></div>
+                        <div><dt>CameraInfo</dt><dd>/camera_f/color/camera_info</dd></div>
+                      </dl>
+                      <div class="calibration-card-footer">
+                        <span class="state-badge idle">0 / 24</span>
+                        <button class="secondary-button" type="button" disabled>采样</button>
+                      </div>
+                    </section>
+                  </div>
+                </article>
+
+                <article class="panel calibration-board-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>标定板</h2>
+                      <p>DFOPTIX Q12-50-3 / 12x9 squares / 3.0 mm</p>
+                    </div>
+                    <span class="state-badge idle" id="cameraCalibrationDependencyBadge">读取中</span>
+                  </div>
+                  <form class="config-form calibration-board-form">
+                    <label>
+                      <span class="field-label">类型</span>
+                      <select id="calibrationBoardType">
+                        <option disabled>ChArUco</option>
+                        <option disabled>AprilTag Grid</option>
+                        <option selected>Checkerboard</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span class="field-label">内角点列数</span>
+                      <input id="calibrationBoardColumns" type="number" min="2" value="11" inputmode="numeric">
+                    </label>
+                    <label>
+                      <span class="field-label">内角点行数</span>
+                      <input id="calibrationBoardRows" type="number" min="2" value="8" inputmode="numeric">
+                    </label>
+                    <label>
+                      <span class="field-label">方格边长<em>mm</em></span>
+                      <input id="calibrationBoardSquareSize" type="number" min="0" step="0.1" value="3.0" inputmode="decimal">
+                    </label>
+                    <label>
+                      <span class="field-label">Tag 边长<em>mm</em></span>
+                      <input id="calibrationBoardTagSize" type="number" min="0" step="0.1" value="0" inputmode="decimal">
+                    </label>
+                    <label>
+                      <span class="field-label">字典</span>
+                      <select id="calibrationBoardDictionary">
+                        <option>DICT_4X4_50</option>
+                        <option>DICT_5X5_100</option>
+                        <option>DICT_APRILTAG_36h11</option>
+                      </select>
+                    </label>
+                  </form>
+                </article>
+
+                <article class="panel calibration-capture-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>采样队列</h2>
+                      <p>图像、内参和父级 TF 时间戳</p>
+                    </div>
+                    <span class="state-badge idle" id="cameraCalibrationCaptureBadge">待采样</span>
+                  </div>
+                  <div class="calibration-progress" aria-label="采样进度">
+                    <span id="cameraCalibrationSampleProgress" style="width: 0%"></span>
+                  </div>
+                  <div class="calibration-sample-table" id="cameraCalibrationSampleTable" role="table" aria-label="相机标定采样队列">
+                    <div role="row">
+                      <span role="columnheader">相机</span>
+                      <span role="columnheader">图像</span>
+                      <span role="columnheader">父级 TF</span>
+                      <span role="columnheader">角点</span>
+                      <span role="columnheader">操作</span>
+                    </div>
+                    <div role="row">
+                      <span>camera_l</span>
+                      <strong>等待</strong>
+                      <strong>等待</strong>
+                      <strong>--</strong>
+                      <span>--</span>
+                    </div>
+                    <div role="row">
+                      <span>camera_r</span>
+                      <strong>等待</strong>
+                      <strong>等待</strong>
+                      <strong>--</strong>
+                      <span>--</span>
+                    </div>
+                    <div role="row">
+                      <span>camera_f</span>
+                      <strong>等待</strong>
+                      <strong>等待</strong>
+                      <strong>--</strong>
+                      <span>--</span>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="panel calibration-solve-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>求解设置</h2>
+                      <p>手眼 / 固定安装标定</p>
+                    </div>
+                    <span class="state-badge idle" id="cameraCalibrationSolveBadge">待求解</span>
+                  </div>
+                  <div class="calibration-method-row">
+                    <div class="segmented" role="tablist" aria-label="手眼标定求解器">
+                      <button class="is-active" data-camera-calibration-method="tsai" type="button">Tsai</button>
+                      <button data-camera-calibration-method="park" type="button">Park</button>
+                      <button data-camera-calibration-method="daniilidis" type="button">Daniilidis</button>
+                    </div>
+                    <label>
+                      <span class="field-label">求解相机</span>
+                      <select id="cameraCalibrationSolveCamera">
+                        <option value="all">全部</option>
+                        <option value="camera_f">camera_f</option>
+                        <option value="camera_l">camera_l</option>
+                        <option value="camera_r">camera_r</option>
+                      </select>
+                    </label>
+                    <label class="calibration-checkline">
+                      <input id="cameraCalibrationEstimateBoardToggle" type="checkbox" checked>
+                      <span>同时估计标定板位姿</span>
+                    </label>
+                    <button class="primary-button" id="cameraCalibrationSolveButton" type="button">开始求解</button>
+                  </div>
+                  <div class="metric-grid calibration-metrics">
+                    <div class="metric-card">
+                      <span>最少姿态</span>
+                      <strong id="cameraCalibrationMinSamplesMetric">12</strong>
+                    </div>
+                    <div class="metric-card">
+                      <span>推荐姿态</span>
+                      <strong id="cameraCalibrationRecommendedSamplesMetric">24</strong>
+                    </div>
+                    <div class="metric-card">
+                      <span>重投影误差</span>
+                      <strong id="cameraCalibrationReprojectionMetric">-- px</strong>
+                    </div>
+                    <div class="metric-card">
+                      <span>旋转残差</span>
+                      <strong id="cameraCalibrationRotationResidualMetric">-- deg</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="panel calibration-output-panel">
+                  <div class="panel-head">
+                    <div>
+                      <h2>TF 链路预览</h2>
+                      <p>camera_extrinsics.json + Orbbec optical frame</p>
+                    </div>
+                    <button class="secondary-button" id="cameraExtrinsicsCopyButton" type="button">复制</button>
+                  </div>
+                  <pre class="calibration-output-preview" id="cameraCalibrationTfPreview">left/link6 -> rgb_camera_l_link -> camera_l_link -> camera_l_color_optical_frame
+right/link6 -> rgb_camera_r_link -> camera_r_link -> camera_r_color_optical_frame
+front_camera_link -> rgb_camera_f_link -> camera_f_link -> camera_f_color_optical_frame</pre>
+                  <div class="calibration-config-editor">
+                    <label class="calibration-checkline">
+                      <input id="cameraExtrinsicsEnabledToggle" type="checkbox">
+                      <span>启用 camera_extrinsics.json 发布</span>
+                    </label>
+                    <label>
+                      <span class="field-label">外参配置 JSON</span>
+                      <textarea id="cameraExtrinsicsConfigEditor" spellcheck="false"></textarea>
+                    </label>
+                    <div class="calibration-config-actions">
+                      <button class="secondary-button" id="cameraExtrinsicsResetButton" type="button">恢复后端配置</button>
+                      <button class="primary-button" id="cameraExtrinsicsSaveButton" type="button">保存配置</button>
+                    </div>
+                    <p class="calibration-projection-result" id="cameraExtrinsicsConfigResult">等待后端配置</p>
+                  </div>
+                  <div class="calibration-projection-check">
+                    <div class="calibration-projection-row">
+                      <label>
+                        <span class="field-label">质检相机</span>
+                        <select id="cameraProjectionCheckCamera">
+                          <option value="camera_f">camera_f</option>
+                          <option value="camera_l">camera_l</option>
+                          <option value="camera_r">camera_r</option>
+                        </select>
+                      </label>
+                      <button class="primary-button" id="cameraProjectionCheckButton" type="button">保存投影质检图</button>
+                      <span class="state-badge idle" id="cameraProjectionCheckBadge">等待</span>
+                    </div>
+                    <p class="calibration-projection-result" id="cameraProjectionCheckResult">output/camera_projection_checks</p>
+                    <div class="calibration-projection-preview" id="cameraProjectionPreview">
+                      <span>暂无投影质检图</span>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </section>
+            <section class="view" data-view-panel="data-playback">
+              <div class="page-head compact">
+                <div>
+                  <p class="eyebrow">传感器数据</p>
+                  <h1>数据回放</h1>
+                </div>
+                <span class="state-badge idle" id="playbackSourceBadge">待准备</span>
+              </div>
+
+              <article class="panel playback-control-panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>回放控制</h2>
+                    <p id="playbackSummary">replay.parquet</p>
+                  </div>
+                  <span class="state-badge idle" id="playbackBadge">待准备</span>
+                </div>
+                <form class="config-form playback-form">
+                  <label class="field-wide"><span class="field-label">数据文件</span><input id="playbackPathInput" type="text" value="/data/robot_station/replay.parquet"></label>
+                  <label><span class="field-label">关节速度<em>deg/s</em></span><input id="playbackJointSpeedInput" type="number" min="0.5" max="30" step="0.5" value="20" inputmode="decimal"></label>
+                </form>
+                <div class="progress-track playback-progress" aria-label="数据回放进度">
+                  <span id="playbackProgressBar" style="width: 0%"></span>
+                </div>
+                <div class="playback-run-row">
+                  <div class="playback-run-status">
+                    <span class="field-label">回放状态</span>
+                    <strong id="playbackExecutionStatus">回放未准备</strong>
+                    <small id="playbackTimeLabel">00:00 / 07:12</small>
+                  </div>
+                  <div class="button-group playback-actions">
+                    <button class="secondary-button" id="playbackEnableRobotButton" type="button">回放准备</button>
+                    <button class="primary-button" id="playbackReplayButton" type="button" disabled>数据回放</button>
+                    <button class="secondary-button" id="playbackStopButton" type="button" disabled>停止</button>
+                  </div>
+                </div>
+                <div class="metric-grid playback-file-info" id="playbackFileInfo"></div>
+              </article>
+
+              <article class="panel playback-chart-panel">
+                <div class="panel-head playback-chart-head">
+                  <div>
+                    <h2>State / Action 曲线</h2>
+                    <p id="playbackChartSummary">18 个维度 / 横轴 time(s)</p>
+                  </div>
+                  <div class="segmented playback-chart-tabs" id="playbackChartTabs" role="tablist">
+                    <button class="is-active" data-playback-chart-group="all" type="button">全部</button>
+                    <button data-playback-chart-group="left" type="button">左臂</button>
+                    <button data-playback-chart-group="right" type="button">右臂</button>
+                    <button data-playback-chart-group="platform" type="button">平台</button>
+                  </div>
+                </div>
+                <div class="playback-chart-legend" id="playbackChartLegend"></div>
+                <div class="playback-chart-grid" id="playbackChartGrid"></div>
+              </article>
+            </section>
+
+          </section>
+
+        </div>
+      </main>
+    </div>
+
+    <dialog class="confirm-dialog" id="confirmDialog">
+      <form method="dialog">
+        <h2 id="confirmTitle">确认操作</h2>
+        <p id="confirmBody">该动作需要操作员确认。</p>
+        <div class="dialog-actions">
+          <button value="cancel" class="secondary-button">取消</button>
+          <button value="confirm" class="primary-button danger">确认</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="rich-tooltip" id="richTooltip" role="tooltip" aria-hidden="true"></div>
+
+    <script src="./app.js?v=20260612-robot-situation-fit"></script>
+  </body>
+</html>
